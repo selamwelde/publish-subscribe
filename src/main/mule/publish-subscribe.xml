@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="194cc221-c713-4f9e-9a24-542c84de98fa" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<vm:config name="VM_Config" doc:name="VM Config" doc:id="5d036b9e-d164-4eff-846d-8d4856504548" >
+		<vm:queues >
+			<vm:queue queueName="Queue1" />
+			<vm:queue queueName="Queue2" />
+			<vm:queue queueName="Queue3" />
+		</vm:queues>
+	</vm:config>
+	<flow name="publish-subscribeFlow" doc:id="919da000-e239-4aa8-bc77-e16ea711ead0" >
+		<http:listener doc:name="Listener" doc:id="4dd962ff-97c7-435d-80df-685a219c27f8" config-ref="HTTP_Listener_config" path="send-data" outputMimeType="application/json"/>
+		<logger level="INFO" doc:name="Logger" doc:id="36f08142-a841-49ba-b55a-d985caedab65" message="Before Publish"/>
+		<scatter-gather doc:name="Scatter-Gather" doc:id="f78a4db7-3a13-4635-9bd9-8d1ba500d2ff" >
+			<route >
+				<vm:publish doc:name="Queue 1" doc:id="f9f65756-2753-4c86-a4b8-b12f3d513f23" config-ref="VM_Config" queueName="Queue1"/>
+			</route>
+			<route >
+				<vm:publish doc:name="Queue2" doc:id="e7b82ce3-fda2-4005-87d0-d8ca21c77070" config-ref="VM_Config" queueName="Queue2"/>
+			</route>
+			<route >
+				<vm:publish doc:name="Queue3" doc:id="87e74d3e-10aa-4581-ba39-0a425adeb0e5" config-ref="VM_Config" queueName="Queue3"/>
+			</route>
+		</scatter-gather>
+		<logger level="INFO" doc:name="Logger" doc:id="ecec953b-560b-4da7-86f2-b5835e61ef4c" message="After 1st publish "/>
+		<set-payload value='#[%dw 2.0&#10;---&#10;{&#10;	"message": "data sent to queue!",&#10;	"code":2&#10;}]' doc:name="Response" doc:id="d0bae249-a76d-4810-b20f-506ad21ec556" doc:description='set payload' mimeType="application/json"/>
+	</flow>
+	<flow name="publish-subscribeFlow1" doc:id="2a6cb9fd-8cb2-475d-9989-0d5eb9c423b0" >
+		<vm:listener doc:name="Listener" doc:id="09573490-3022-4f6f-a7a3-14c24bf4b687" config-ref="VM_Config" queueName="Queue1" numberOfConsumers="1"/>
+		<logger level="INFO" doc:name="Logger" doc:id="115f6cba-f48c-47f9-95c2-be1751ee60f9" message=" vm consumer 1"/>
+		<ee:transform doc:name="to csv" doc:id="772b042b-2d95-40d9-b71a-371a8bbf69bd" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/csv
+---
+payload
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="to csv" doc:id="06d8bd2f-84e0-400c-9b98-c4f68e999a4b" path="D:\MuleSoft\airports19.csv"/>
+	</flow>
+	<flow name="publish-subscribeFlow2" doc:id="a73d10f1-60d5-4648-8f93-521a04034a10" >
+		<vm:listener doc:name="Listener" doc:id="f2609bdf-8a92-4bb4-bd10-486a3867293d" config-ref="VM_Config" numberOfConsumers="1" queueName="Queue2"/>
+		<logger level="INFO" doc:name="Logger" doc:id="421e48b1-13d4-419e-a782-2092f3f5192a" message=" vm consumer 2"/>
+		<ee:transform doc:name="to json" doc:id="80b6af6a-9e6b-4e8b-b349-9df9477adc3f">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="to json" doc:id="cf3e238c-8159-42c3-b373-d1500bf7246b" path="D:\MuleSoft\airports19.json"/>
+	</flow>
+	<flow name="publish-subscribeFlow3" doc:id="e3efd5ce-12b3-4c96-a82c-c0379ce2937c" >
+		<vm:listener doc:name="Listener" doc:id="df82c28f-a860-407c-87c2-ee7a44ce814c" config-ref="VM_Config" numberOfConsumers="1" queueName="Queue3"/>
+		<logger level="INFO" doc:name="Logger" doc:id="cc5ec7ba-aa3d-4350-800d-8175d759538d" message=" vm consumer 3"/>
+		<ee:transform doc:name="to xml" doc:id="9f598851-99d5-4c3a-bc61-1cd6f22e314a" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+{
+	"data":{
+		'row':payload
+	       }
+}
+
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="to xml" doc:id="4feadf1b-4a40-45f1-ba46-bd35eb06b897" path="D:\MuleSoft\airports19.xml" mode="APPEND"/>
+	</flow>
+</mule>
